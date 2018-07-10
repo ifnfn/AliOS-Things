@@ -6,7 +6,7 @@ $(NAME)_TYPE := kernel
 MODULE               := CH2201
 HOST_CHIP            := ch2201
 HOST_ARCH            := ck802
-HOST_MCU_FAMILY      := csky
+HOST_MCU_FAMILY      := cb2201
 SUPPORT_BINS         := no
 
 #$(NAME)_COMPONENTS  :=  tfs
