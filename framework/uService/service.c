@@ -71,7 +71,6 @@ static void rpc_destroy(rpc_t *rpc)
 int service_call(service_t *srv, int cmd, void *param, void *resp, size_t timeout, int sync)
 {
     check(srv);
-    check(srv->task);
 
     int ret = -1;
     rpc_t *rpc = rpc_new(cmd, timeout, sync, param, resp);
@@ -137,7 +136,7 @@ static void service_eloop_event(input_event_t *event, service_t *srv)
 }
 
 
-int service_init(service_t *srv, const char *name, void *context, int max_cmd_id)
+int service_init(service_t *srv, const char *name, const char *group_name, void *context, int max_cmd_id)
 {
     check(srv);
 
@@ -152,7 +151,6 @@ int service_init(service_t *srv, const char *name, void *context, int max_cmd_id
 
     strncpy(srv->name, name, sizeof(srv->name) - 1);
     srv->context    = context;
-    srv->running    = 1;
     srv->max_cmd_id = max_cmd_id;
 
     aos_register_event_filter(EV_SERVICE, (aos_event_cb)service_eloop_event, srv);
@@ -164,7 +162,9 @@ void service_destroy(service_t *srv)
 {
     check(srv);
 
-    srv->running = 0;
+    aos_unregister_event_filter(EV_SERVICE, (aos_event_cb)service_eloop_event, srv);
+    aos_mutex_free(&srv->mutex);
+    free(srv->cmd_callbacks);
 }
 
 #if 0
