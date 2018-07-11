@@ -20,13 +20,19 @@ typedef struct {
     void *hdl;
 } aos_hdl_t;
 
-typedef aos_hdl_t aos_task_t;
 typedef aos_hdl_t aos_mutex_t;
 typedef aos_hdl_t aos_sem_t;
 typedef aos_hdl_t aos_queue_t;
 typedef aos_hdl_t aos_timer_t;
 typedef aos_hdl_t aos_work_t;
 typedef aos_hdl_t aos_event_t;
+
+typedef struct {
+    void *hdl;
+    aos_sem_t sem;
+    void (*fn)(void*);
+    void *args;
+} aos_task_t;
 
 typedef struct {
     void *hdl;
@@ -88,6 +94,8 @@ int aos_task_new_ext(aos_task_t *task, const char *name, void (*fn)(void *), voi
  * @param[in]  code  not used now.
  */
 void aos_task_exit(int code);
+
+void aos_task_join(aos_task_t *task);
 
 /**
  * Get task name.

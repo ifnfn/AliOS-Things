@@ -32,6 +32,15 @@ const char *aos_version_get(void)
 }
 
 #if (RHINO_CONFIG_KOBJ_DYN_ALLOC > 0)
+
+static void task_fn(void *arg)
+{
+    aos_task_t *task = (aos_task_t*)arg;
+
+    task->fn(task->args);
+    aos_sem_signal(&task->sem);
+}
+
 int aos_task_new(const char *name, void (*fn)(void *), void *arg,
                  int stack_size)
 {
@@ -52,8 +61,12 @@ int aos_task_new_ext(aos_task_t *task, const char *name, void (*fn)(void *), voi
                      int stack_size, int prio)
 {
     int ret;
-    ret = (int)krhino_task_dyn_create((ktask_t **)(&(task->hdl)), name, arg, prio, 0,
-                                      stack_size / sizeof(cpu_stack_t), fn, 1u);
+    aos_sem_new(&task->sem, 0);
+    task->fn = fn;
+    task->args = arg;
+
+    ret = (int)krhino_task_dyn_create((ktask_t **)(&(task->hdl)), name, task, prio, 0,
+                                      stack_size / sizeof(cpu_stack_t), task_fn, 1u);
     if (ret == RHINO_SUCCESS) {
         return 0;
     }
@@ -341,15 +354,15 @@ void aos_event_free(aos_event_t *event)
         return;
     }
 
-    (void)krhino_event_dyn_del(event->hdl);
+    krhino_event_dyn_del(event->hdl);
 
     event->hdl = NULL;
 }
 
 int aos_event_get
 (
-    aos_event_t *event,
-    unsigned int flags,
+    aos_event_t *event, 
+    unsigned int flags, 
     unsigned char opt,
     unsigned int *actl_flags,
     unsigned int timeout
@@ -506,7 +519,7 @@ int aos_timer_new(aos_timer_t *timer, void (*fn)(void *, void *),
         ret = krhino_timer_dyn_create(((ktimer_t **)(&timer->hdl)), "AOS", (timer_cb_t)fn, MS2TICK(ms), 0, arg, 1);
     } else {
         ret = krhino_timer_dyn_create(((ktimer_t **)(&timer->hdl)), "AOS", (timer_cb_t)fn, MS2TICK(ms), MS2TICK(ms),
-                                      arg, 1);
+                                  arg, 1);
     }
 
     if (ret != RHINO_SUCCESS) {
@@ -517,7 +530,7 @@ int aos_timer_new(aos_timer_t *timer, void (*fn)(void *, void *),
 }
 
 int aos_timer_new_ext(aos_timer_t *timer, void (*fn)(void *, void *),
-                      void *arg, int ms, int repeat, unsigned char auto_run)
+                  void *arg, int ms, int repeat, unsigned char auto_run)
 {
     kstat_t   ret;
 
@@ -529,7 +542,7 @@ int aos_timer_new_ext(aos_timer_t *timer, void (*fn)(void *, void *),
         ret = krhino_timer_dyn_create(((ktimer_t **)(&timer->hdl)), "AOS", (timer_cb_t)fn, MS2TICK(ms), 0, arg, auto_run);
     } else {
         ret = krhino_timer_dyn_create(((ktimer_t **)(&timer->hdl)), "AOS", (timer_cb_t)fn, MS2TICK(ms), MS2TICK(ms),
-                                      arg, auto_run);
+                                  arg, auto_run);
     }
 
     if (ret != RHINO_SUCCESS) {
